@@ -1,2 +1,18 @@
-customtkinter
-pytest
+# Procesador Monociclo MIPS — Dependencias
+# Python >= 3.10 requerido (match/case, type hints modernas)
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Opcional: GUI mejorada con CustomTkinter
+# customtkinter>=5.2.0   # pip install customtkinter
+# (la GUI base usa solo tkinter — incluido en Python estándar)
+
+# Opcional: exportar diagramas
+# pillow>=10.0.0         # pip install pillow
+
+# Linting / calidad de código (desarrollo)
+# flake8>=6.0.0
+# black>=23.0.0
+# mypy>=1.0.0
