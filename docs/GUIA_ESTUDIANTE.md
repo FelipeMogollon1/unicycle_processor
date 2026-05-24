@@ -402,5 +402,5 @@ con extensión `.asm`, `.s` o `.txt` que contenga instrucciones MIPS.
 
 ---
 
-*Simulador desarrollado para la asignatura Arquitectura de Computadores, 2025.*  
+*Simulador desarrollado para la asignatura Arquitectura de Computadores, 2026.*  
 *Andres Mogollon · Juan Bedoya · Michael Hurtado · Prof. David Andres Romero Arenas*
