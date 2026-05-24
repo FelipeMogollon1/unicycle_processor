@@ -49,6 +49,20 @@ YELLOW    = "#D29922"
 PURPLE    = "#BC8CFF"
 CYAN      = "#79C0FF"
 
+STAGE_COLORS = {
+    "IF": GREEN,
+    "ID": ACCENT5,
+    "EX": RED,
+    "MEM": CYAN,
+    "WB": PURPLE,
+}
+STAGE_LABELS = {
+    "IF": "FETCH",
+    "ID": "DECODE",
+    "EX": "EXECUTE",
+    "MEM": "MEMORY",
+    "WB": "WRITE BACK",
+}
 
 EXAMPLE_PROGRAM = """\
 # ── Programa de ejemplo: suma 1+2+3+4 = 10 ──────────────
@@ -307,26 +321,64 @@ class ProcessorGUI:
         self._dp_canvas = tk.Canvas(
             frame, bg=BG_CARD, bd=0, highlightthickness=0,
         )
-        self._dp_canvas.pack(fill="both", expand=True, padx=4, pady=4)
+        self._dp_canvas.pack(fill="both", expand=True, padx=4, pady=(4, 8))
         self._dp_canvas.bind("<Configure>", lambda e: self._draw_datapath())
         self._draw_datapath()
+
+        info_frame = tk.Frame(frame, bg=BG_PANEL)
+        info_frame.pack(fill="x", padx=4, pady=(0, 4))
+
+        header = tk.Frame(info_frame, bg=BG_PANEL)
+        header.pack(fill="x")
+        self._lbl_stage_title = tk.Label(
+            header, text="ETAPA", font=("Consolas", 10, "bold"),
+            fg=ACCENT, bg=BG_PANEL
+        )
+        self._lbl_stage_title.pack(side="left")
+        self._lbl_stage_subtitle = tk.Label(
+            header, text="Esperando ejecución...",
+            font=("Consolas", 8), fg=TEXT_SEC, bg=BG_PANEL
+        )
+        self._lbl_stage_subtitle.pack(side="left", padx=(8, 0))
+
+        info_grid = tk.Frame(info_frame, bg=BG_PANEL)
+        info_grid.pack(fill="x", pady=(8, 0))
+
+        self._stage_info_labels: dict[str, tk.Label] = {}
+
+        def add_info(label: str, key: str, row: int, col: int):
+            tk.Label(info_grid, text=label, font=("Consolas", 8),
+                     fg=TEXT_SEC, bg=BG_PANEL).grid(row=row, column=col * 2,
+                                                    sticky="w", padx=(0, 4), pady=2)
+            lbl = tk.Label(info_grid, text="—", font=("Consolas", 9),
+                           fg=TEXT_PRI, bg=BG_CARD, anchor="w",
+                           padx=6, pady=3)
+            lbl.grid(row=row, column=col * 2 + 1,
+                     sticky="we", padx=(0, 4), pady=2)
+            info_grid.columnconfigure(col * 2 + 1, weight=1)
+            self._stage_info_labels[key] = lbl
+
+        add_info("A:", "alu_a", 0, 0)
+        add_info("B:", "alu_b", 0, 1)
+        add_info("Operación:", "alu_op", 1, 0)
+        add_info("Resultado:", "alu_res", 1, 1)
+        add_info("Zero:", "alu_zero", 2, 0)
+        add_info("Overflow:", "alu_overflow", 2, 1)
+        add_info("Destino:", "write_reg", 3, 0)
+        add_info("Write Back:", "write_back", 3, 1)
+        add_info("Dirección MEM:", "mem_addr", 4, 0)
 
     def _draw_datapath(self, active_stage: str = ""):
         c = self._dp_canvas
         c.delete("all")
-        W = c.winfo_width()  or 500
+        W = c.winfo_width() or 500
         H = c.winfo_height() or 260
 
-        # Colores por etapa activa
         def stage_color(stage: str) -> str:
-            if active_stage == stage:
-                return ACCENT
-            return BG_HOVER
+            return STAGE_COLORS[stage] if active_stage == stage else BG_HOVER
 
         def stage_text_color(stage: str) -> str:
             return BG_DARK if active_stage == stage else TEXT_SEC
-
-        # ── Bloques del datapath ──────────────────────────────────────
 
         blocks = [
             ("IF",   "Inst.\nMemory",  0.05, 0.2, 0.14, 0.8),
@@ -336,72 +388,88 @@ class ProcessorGUI:
             ("WB",   "Write\nBack",    0.82, 0.3, 0.95, 0.7),
         ]
 
-        block_coords: dict[str, tuple] = {}
-
         for stage, label, x1r, y1r, x2r, y2r in blocks:
             x1, y1 = W * x1r, H * y1r
             x2, y2 = W * x2r, H * y2r
-            fill = stage_color(stage)
-            c.create_rectangle(x1, y1, x2, y2,
-                                fill=fill, outline=ACCENT if active_stage == stage else BORDER,
-                                width=2 if active_stage == stage else 1)
+            rect_id = c.create_rectangle(
+                x1, y1, x2, y2,
+                fill=stage_color(stage),
+                outline=STAGE_COLORS[stage] if active_stage == stage else BORDER,
+                width=2 if active_stage == stage else 1,
+            )
             c.create_text((x1 + x2) / 2, (y1 + y2) / 2,
                            text=label, fill=stage_text_color(stage),
                            font=("Consolas", 8, "bold"), justify="center")
             c.create_text((x1 + x2) / 2, y1 - 8,
-                           text=stage, fill=ACCENT if active_stage == stage else TEXT_MUT,
+                           text=stage, fill=STAGE_COLORS[stage] if active_stage == stage else TEXT_MUT,
                            font=("Consolas", 7))
-            block_coords[stage] = (x1, y1, x2, y2)
 
-        # ── PC ─────────────────────────────────────────────────────────
-        px, py = W * 0.01, H * 0.45
-        c.create_rectangle(px, py - 14, px + W * 0.04, py + 14,
-                            fill=ACCENT4 if active_stage == "IF" else BG_HOVER,
-                            outline=ACCENT4, width=1)
-        c.create_text(px + W * 0.02, py,
-                       text="PC", fill=BG_DARK if active_stage == "IF" else ACCENT4,
-                       font=("Consolas", 8, "bold"))
+            if stage == "IF":
+                self.inst_mem_box = rect_id
+            elif stage == "ID":
+                self.regbank_box = rect_id
+            elif stage == "EX":
+                self.alu_box = rect_id
+            elif stage == "MEM":
+                self.data_mem_box = rect_id
+            elif stage == "WB":
+                self.write_back_box = rect_id
 
-        # ── Flechas de conexión (se iluminan hasta la etapa activa) ───────
-        stage_order = ["IF", "ID", "EX", "MEM", "WB"]
-        active_idx  = stage_order.index(active_stage) if active_stage in stage_order else -1
+        self.pc_box = c.create_rectangle(
+            W * 0.01, H * 0.45 - 14,
+            W * 0.05, H * 0.45 + 14,
+            fill=STAGE_COLORS["IF"] if active_stage == "IF" else BG_HOVER,
+            outline=ACCENT4, width=1,
+        )
+        c.create_text(W * 0.03, H * 0.45,
+                      text="PC", fill=BG_DARK if active_stage == "IF" else ACCENT4,
+                      font=("Consolas", 8, "bold"))
 
-        # Cada flecha corresponde al tramo ANTES del bloque indicado
-        # connections: (x1r, y1r, x2r, y2r, iluminar_si_etapa_activa_>=_idx)
-        connections = [
-            (0.04, 0.5,  0.05, 0.5,  0),   # PC → IF       (activa desde IF=0)
-            (0.14, 0.5,  0.22, 0.5,  1),   # IF → ID       (activa desde ID=1)
-            (0.36, 0.5,  0.44, 0.5,  2),   # ID → EX       (activa desde EX=2)
-            (0.55, 0.5,  0.62, 0.5,  3),   # EX → MEM      (activa desde MEM=3)
-            (0.75, 0.5,  0.82, 0.5,  4),   # MEM → WB      (activa desde WB=4)
-        ]
-        for x1r, y1r, x2r, y2r, min_idx in connections:
-            lit   = active_idx >= min_idx
-            color = ACCENT if lit else BORDER
-            width = 2 if lit else 1
-            c.create_line(W * x1r, H * y1r, W * x2r, H * y2r,
-                          fill=color, width=width, arrow="last",
-                          arrowshape=(8, 10, 3))
+        self.line_pc_im = c.create_line(
+            W * 0.04, H * 0.5, W * 0.05, H * 0.5,
+            fill=ACCENT if active_stage in ("IF", "ID", "EX", "MEM", "WB") else BORDER,
+            width=2 if active_stage in ("IF", "ID", "EX", "MEM", "WB") else 1,
+            arrow="last", arrowshape=(8, 10, 3)
+        )
+        self.line_im_id = c.create_line(
+            W * 0.14, H * 0.5, W * 0.22, H * 0.5,
+            fill=ACCENT if active_stage in ("ID", "EX", "MEM", "WB") else BORDER,
+            width=2 if active_stage in ("ID", "EX", "MEM", "WB") else 1,
+            arrow="last", arrowshape=(8, 10, 3)
+        )
+        self.line_reg_alu = c.create_line(
+            W * 0.36, H * 0.5, W * 0.44, H * 0.5,
+            fill=ACCENT if active_stage in ("EX", "MEM", "WB") else BORDER,
+            width=2 if active_stage in ("EX", "MEM", "WB") else 1,
+            arrow="last", arrowshape=(8, 10, 3)
+        )
+        self.line_alu_dm = c.create_line(
+            W * 0.55, H * 0.5, W * 0.62, H * 0.5,
+            fill=ACCENT if active_stage in ("MEM", "WB") else BORDER,
+            width=2 if active_stage in ("MEM", "WB") else 1,
+            arrow="last", arrowshape=(8, 10, 3)
+        )
+        self.line_dm_wb = c.create_line(
+            W * 0.75, H * 0.5, W * 0.82, H * 0.5,
+            fill=ACCENT if active_stage == "WB" else BORDER,
+            width=2 if active_stage == "WB" else 1,
+            arrow="last", arrowshape=(8, 10, 3)
+        )
 
-        # ── Unidad de control (arriba) ──────────────────────────────────
-        cu_x1, cu_y1 = W * 0.22, H * 0.02
-        cu_x2, cu_y2 = W * 0.55, H * 0.18
-        c.create_rectangle(cu_x1, cu_y1, cu_x2, cu_y2,
-                            fill=YELLOW if active_stage == "ID" else BG_HOVER,
-                            outline=YELLOW, width=1)
-        c.create_text((cu_x1 + cu_x2) / 2, (cu_y1 + cu_y2) / 2,
-                       text="Unidad de Control",
-                       fill=BG_DARK if active_stage == "ID" else YELLOW,
-                       font=("Consolas", 8, "bold"))
-
-        # Flechas de señales de control
-        ctrl_y_src = cu_y2
-        ctrl_y_dst = H * 0.2
+        self.cu_box = c.create_rectangle(
+            W * 0.22, H * 0.02, W * 0.55, H * 0.18,
+            fill=YELLOW if active_stage == "ID" else BG_HOVER,
+            outline=YELLOW, width=1,
+        )
+        c.create_text((W * 0.22 + W * 0.55) / 2,
+                      (H * 0.02 + H * 0.18) / 2,
+                      text="Unidad de Control",
+                      fill=BG_DARK if active_stage == "ID" else YELLOW,
+                      font=("Consolas", 8, "bold"))
         for xr in [0.29, 0.38, 0.50]:
-            c.create_line(W * xr, ctrl_y_src, W * xr, ctrl_y_dst,
+            c.create_line(W * xr, H * 0.18, W * xr, H * 0.2,
                           fill=YELLOW, width=1, dash=(3, 3))
 
-        # ── Indicador de etapa activa ──────────────────────────────────
         if active_stage:
             label_map = {
                 "IF": "FETCH — Leyendo instrucción",
@@ -412,18 +480,126 @@ class ProcessorGUI:
                 "HALT": "HALT — Programa terminado",
                 "ERROR": "ERROR — Excepción",
             }
-            c.create_rectangle(0, H - 22, W, H,
-                                fill=BG_HOVER, outline="")
+            c.create_rectangle(0, H - 22, W, H, fill=BG_HOVER, outline="")
             c.create_text(W / 2, H - 11,
-                           text=label_map.get(active_stage, active_stage),
-                           fill=ACCENT, font=("Consolas", 9, "bold"))
+                          text=label_map.get(active_stage, active_stage),
+                          fill=ACCENT, font=("Consolas", 9, "bold"))
 
-        # ── Info del ciclo actual ──────────────────────────────────────
         if self._current_snapshot and self._current_snapshot.decoded:
             d = self._current_snapshot.decoded
             c.create_text(8, H - 38, anchor="w",
                            text=f"Instrucción: {d.mnemonic}",
                            fill=TEXT_PRI, font=("Consolas", 9))
+
+    def highlight_stage(self, stage: str, snapshot: CycleSnapshot | None = None,
+                        pre_registers: dict | None = None):
+        self._draw_datapath(stage)
+        self._lbl_stage_title.configure(text=STAGE_LABELS.get(stage, stage))
+        subtitle = {
+            "IF": "FETCH",
+            "ID": "DECODE",
+            "EX": "EXECUTE",
+            "MEM": "MEMORY",
+            "WB": "WRITE BACK",
+        }.get(stage, stage)
+        self._lbl_stage_subtitle.configure(text=f"Etapa: {subtitle}")
+        self._render_stage_info(stage, snapshot, pre_registers)
+
+    def animate_cycle(self, snapshot: CycleSnapshot, pre_registers: dict[str, int]):
+        stage_delay_ms = max(130, int(self._auto_delay * 280))
+        stages = ["IF", "ID", "EX", "MEM", "WB"]
+
+        def show_stage(idx: int):
+            if idx < len(stages):
+                stage = stages[idx]
+                self.highlight_stage(stage, snapshot, pre_registers)
+                self._lbl_status.configure(text=f"● {STAGE_LABELS.get(stage, stage)}",
+                                           fg=STAGE_COLORS.get(stage, ACCENT))
+                self.root.after(stage_delay_ms, lambda: show_stage(idx + 1))
+            else:
+                self._update_ui(snapshot, pre_registers)
+
+        show_stage(0)
+
+    def _render_stage_info(self, stage: str,
+                           snapshot: CycleSnapshot | None,
+                           pre_registers: dict | None):
+        defaults = {
+            "alu_a": "—",
+            "alu_b": "—",
+            "alu_op": "—",
+            "alu_res": "—",
+            "alu_zero": "—",
+            "alu_overflow": "—",
+            "write_reg": "—",
+            "write_back": "—",
+            "mem_addr": "—",
+        }
+
+        if not snapshot or not self._stage_info_labels:
+            for key, lbl in self._stage_info_labels.items():
+                lbl.configure(text=defaults[key])
+            return
+
+        from src.components.register_bank import REGISTER_NAMES
+
+        decoded = snapshot.decoded
+        signals = snapshot.signals
+        rs_name = rt_name = "—"
+        a_value = b_value = "—"
+        if decoded and pre_registers is not None:
+            rs_name = REGISTER_NAMES.get(decoded.rs, f"R{decoded.rs}")
+            rt_name = REGISTER_NAMES.get(decoded.rt, f"R{decoded.rt}")
+            a_value = pre_registers.get(rs_name, 0)
+            if signals and signals.alu_src:
+                b_value = decoded.imm_signed
+            else:
+                b_value = pre_registers.get(rt_name, 0)
+
+        alu_label = decoded.mnemonic if decoded else "—"
+        alu_res = snapshot.alu_result.value if snapshot.alu_result else None
+        alu_zero = int(snapshot.alu_result.zero) if snapshot.alu_result else None
+        alu_overflow = int(snapshot.alu_result.overflow) if snapshot.alu_result else None
+        write_reg = snapshot.write_reg if snapshot.write_reg else None
+        write_name = REGISTER_NAMES.get(write_reg, f"R{write_reg}") if write_reg is not None else "—"
+        write_back = snapshot.write_back if snapshot.write_reg else None
+        mem_address = snapshot.alu_result.value if snapshot.alu_result else None
+
+        values = defaults.copy()
+        if stage == "IF":
+            values["alu_op"] = f"PC={snapshot.pc:#010x}"
+        elif stage == "ID":
+            values["alu_op"] = alu_label
+            values["alu_a"] = f"{rs_name}"
+            values["alu_b"] = f"{rt_name}"
+        elif stage == "EX":
+            values["alu_a"] = f"{a_value:#010x}" if isinstance(a_value, int) else a_value
+            values["alu_b"] = f"{b_value:#010x}" if isinstance(b_value, int) else b_value
+            values["alu_op"] = alu_label
+            values["alu_res"] = f"{alu_res:#010x}" if alu_res is not None else "—"
+            values["alu_zero"] = str(alu_zero) if alu_zero is not None else "—"
+            values["alu_overflow"] = str(alu_overflow) if alu_overflow is not None else "—"
+        elif stage == "MEM":
+            values["alu_res"] = f"{alu_res:#010x}" if alu_res is not None else "—"
+            values["alu_op"] = alu_label
+            values["mem_addr"] = f"{mem_address:#010x}" if mem_address is not None else "—"
+        elif stage == "WB":
+            values["alu_res"] = f"{alu_res:#010x}" if alu_res is not None else "—"
+            values["alu_op"] = alu_label
+            values["write_reg"] = f"{write_name}"
+            values["write_back"] = f"{write_back:#010x}" if write_back is not None else "—"
+            values["mem_addr"] = f"{mem_address:#010x}" if mem_address is not None else "—"
+        else:
+            values["alu_op"] = alu_label
+
+        for key, lbl in self._stage_info_labels.items():
+            lbl.configure(text=values[key])
+
+    def _clear_stage_info(self):
+        if not self._stage_info_labels:
+            return
+        for label in self._stage_info_labels.values():
+            label.configure(text="—")
 
     # ─── Log de ciclos ────────────────────────────────────────────────────
 
@@ -703,6 +879,9 @@ class ProcessorGUI:
             self._btn_step.configure(state="normal")
             self._btn_auto.configure(state="normal")
             self._btn_reset.configure(state="normal")
+            self._clear_stage_info()
+            self._lbl_stage_title.configure(text="ETAPA")
+            self._lbl_stage_subtitle.configure(text="Esperando ejecución...")
             self._update_registers(CycleSnapshot(0, 0, 0,
                                                    registers=self.proc.registers.dump()))
             self._update_memory(CycleSnapshot(0, 0, 0))
@@ -715,38 +894,13 @@ class ProcessorGUI:
             messagebox.showinfo("Halt", "El procesador está detenido. Presiona Reset.")
             return
         try:
+            pre_registers = self.proc.registers.dump()
             snap = self.proc.step()
             self._current_snapshot = snap
             self._cycle_log.append(snap)
-            self._animate_stages(snap)
+            self.animate_cycle(snap, pre_registers)
         except Exception as e:
             messagebox.showerror("Error de Ejecución", str(e))
-
-    # ── Animación de etapas del datapath ────────────────────────────────
-
-    def _animate_stages(self, snap: CycleSnapshot):
-        """
-        Recorre visualmente IF→ID→EX→MEM→WB iluminando cada bloque
-        en secuencia antes de actualizar los paneles con el resultado final.
-        """
-        if snap.stage in ("HALT", "ERROR"):
-            self._update_ui(snap)
-            return
-
-        # Delay por etapa: proporcional a la velocidad configurada
-        stage_delay_ms = max(55, int(self._auto_delay * 170))
-        stages = ["IF", "ID", "EX", "MEM", "WB"]
-
-        def show_stage(idx: int):
-            if idx < len(stages):
-                self._draw_datapath(stages[idx])
-                self._lbl_status.configure(text=f"● {stages[idx]}", fg=ACCENT)
-                self.root.after(stage_delay_ms, lambda: show_stage(idx + 1))
-            else:
-                # Animación completa → pintar paneles con datos reales
-                self._update_ui(snap)
-
-        show_stage(0)
 
     def _on_auto(self):
         if self._auto_running:
@@ -802,9 +956,8 @@ class ProcessorGUI:
     #  Actualización de UI
     # ═══════════════════════════════════════════════════════
 
-    def _update_ui(self, snap: CycleSnapshot):
+    def _update_ui(self, snap: CycleSnapshot, pre_registers: dict[str, int] | None = None):
         """Actualiza header, datapath final y todos los paneles."""
-        # Header
         self._lbl_cycle.configure(text=f"Ciclo: {snap.cycle_number}")
         self._lbl_pc.configure(text=f"PC: {snap.pc:#010x}")
 
@@ -813,23 +966,25 @@ class ProcessorGUI:
             self._btn_step.configure(state="disabled")
             self._btn_auto.configure(state="disabled")
             self._draw_datapath("HALT")
+            self._lbl_stage_title.configure(text="HALT")
+            self._lbl_stage_subtitle.configure(text="Programa detenido")
+            self._render_stage_info("HALT", snap, pre_registers)
         elif snap.stage == "ERROR":
             self._lbl_status.configure(text="⚠ ERROR", fg=RED)
             self._draw_datapath("")
+            self._lbl_stage_title.configure(text="ERROR")
+            self._lbl_stage_subtitle.configure(text="Excepción durante ejecución")
+            self._clear_stage_info()
         else:
-            # Mostrar WB como estado final del ciclo completado
             self._lbl_status.configure(text="● WB", fg=ACCENT)
-            self._draw_datapath("WB")
+            self.highlight_stage("WB", snap, pre_registers)
 
-        # Paneles laterales
         self._update_registers(snap)
         self._update_memory(snap)
         self._update_signals(snap)
 
-        # Log de ciclos
         self._log_append(snap)
 
-        # Status bar
         if snap.decoded:
             alu_str = f"{snap.alu_result.value:#010x}" if snap.alu_result else "0x00000000"
             self._statusbar(
