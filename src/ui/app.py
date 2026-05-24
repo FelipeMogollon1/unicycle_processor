@@ -132,18 +132,25 @@ class ProcessorGUI:
         # Header
         self._build_header()
 
-        # Cuerpo principal (3 columnas)
+        # Cuerpo principal (3 columnas) — usar grid en la raíz para responsividad
         body = tk.Frame(self.root, bg=BG_DARK)
-        body.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        body.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
 
-        body.columnconfigure(0, weight=2, minsize=280)
-        body.columnconfigure(1, weight=5, minsize=450)
-        body.columnconfigure(2, weight=3, minsize=300)
+        # Hacer que la ventana principal distribuya espacio al body
+        self.root.rowconfigure(1, weight=1)
+        self.root.columnconfigure(0, weight=1)
+
+        body.columnconfigure(0, weight=2, minsize=220)
+        body.columnconfigure(1, weight=5, minsize=420)
+        body.columnconfigure(2, weight=3, minsize=260)
         body.rowconfigure(0, weight=1)
 
         # Columna izquierda — editor + controles
         left = tk.Frame(body, bg=BG_DARK)
         left.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
+        left.rowconfigure(0, weight=3)
+        left.rowconfigure(1, weight=1)
+        left.columnconfigure(0, weight=1)
         self._build_editor(left)
         self._build_controls(left)
 
@@ -159,6 +166,8 @@ class ProcessorGUI:
         # Columna derecha — registros + memoria + señales
         right = tk.Frame(body, bg=BG_DARK)
         right.grid(row=0, column=2, sticky="nsew", padx=(4, 0))
+        right.rowconfigure(0, weight=1)
+        right.columnconfigure(0, weight=1)
         self._build_right_panel(right)
 
         # Status bar
@@ -168,8 +177,8 @@ class ProcessorGUI:
 
     def _build_header(self):
         hdr = tk.Frame(self.root, bg=BG_PANEL, height=52)
-        hdr.pack(fill="x", padx=0, pady=0)
-        hdr.pack_propagate(False)
+        hdr.grid(row=0, column=0, sticky="ew", padx=0, pady=0)
+        hdr.grid_propagate(False)
 
         tk.Label(hdr, text="⬡", font=("Consolas", 22), fg=ACCENT,
                  bg=BG_PANEL).pack(side="left", padx=(16, 4))
@@ -185,25 +194,32 @@ class ProcessorGUI:
         self._lbl_cycle = tk.Label(hdr, text="Ciclo: 0",
                                     font=("Consolas", 10, "bold"),
                                     fg=ACCENT, bg=BG_PANEL)
-        self._lbl_cycle.pack(side="right", padx=16)
+        self._lbl_cycle.grid(row=0, column=3, padx=16, sticky="e")
 
         self._lbl_pc = tk.Label(hdr, text="PC: 0x00000000",
-                                  font=("Consolas", 10),
-                                  fg=ACCENT4, bg=BG_PANEL)
-        self._lbl_pc.pack(side="right", padx=8)
+                      font=("Consolas", 10),
+                      fg=ACCENT4, bg=BG_PANEL)
+        self._lbl_pc.grid(row=0, column=2, padx=8, sticky="e")
 
         self._lbl_status = tk.Label(hdr, text="● LISTO",
-                                      font=("Consolas", 10, "bold"),
-                                      fg=GREEN, bg=BG_PANEL)
-        self._lbl_status.pack(side="right", padx=8)
+                          font=("Consolas", 10, "bold"),
+                          fg=GREEN, bg=BG_PANEL)
+        self._lbl_status.grid(row=0, column=1, padx=8, sticky="e")
 
-        tk.Frame(self.root, bg=BORDER, height=1).pack(fill="x")
+        hdr.columnconfigure(0, weight=1)
+        hdr.columnconfigure(1, weight=0)
+        hdr.columnconfigure(2, weight=0)
+        hdr.columnconfigure(3, weight=0)
+
+        # separator intentionally omitted to avoid mixing geometry managers on root
 
     # ─── Editor de código ─────────────────────────────────────────────────
 
     def _build_editor(self, parent):
         frame = self._card(parent, "📝  Editor Ensamblador")
-        frame.pack(fill="both", expand=True, pady=(0, 4))
+        frame.grid(row=0, column=0, sticky="nsew", pady=(0, 4))
+        parent.grid_rowconfigure(0, weight=3)
+        parent.grid_columnconfigure(0, weight=1)
 
         txt_frame = tk.Frame(frame, bg=BG_CARD)
         txt_frame.pack(fill="both", expand=True, padx=6, pady=6)
@@ -215,7 +231,7 @@ class ProcessorGUI:
             bd=0, padx=4, pady=4, selectbackground=BG_HOVER,
             insertbackground=BG_HOVER, relief="flat",
         )
-        self._line_nums.pack(side="left", fill="y")
+        self._line_nums.grid(row=0, column=0, sticky="ns")
 
         # Editor principal
         self._editor = tk.Text(
@@ -227,11 +243,13 @@ class ProcessorGUI:
             bd=0, padx=8, pady=4,
             undo=True, relief="flat",
         )
-        self._editor.pack(side="left", fill="both", expand=True)
+        self._editor.grid(row=0, column=1, sticky="nsew")
 
         scrolly = ttk.Scrollbar(txt_frame, orient="vertical",
                                  command=self._editor.yview)
-        scrolly.pack(side="right", fill="y")
+        scrolly.grid(row=0, column=2, sticky="ns")
+        # configure inner grid
+        txt_frame.grid_columnconfigure(1, weight=1)
         self._editor.configure(yscrollcommand=scrolly.set)
         self._editor.bind("<KeyRelease>", self._update_line_numbers)
 
@@ -280,7 +298,8 @@ class ProcessorGUI:
 
     def _build_controls(self, parent):
         frame = self._card(parent, "⚙  Controles")
-        frame.pack(fill="x", pady=(0, 4))
+        frame.grid(row=1, column=0, sticky="nsew", pady=(0, 4))
+        parent.grid_rowconfigure(1, weight=1)
 
         # Fila 1 — botones principales
         row1 = tk.Frame(frame, bg=BG_CARD)
@@ -309,8 +328,44 @@ class ProcessorGUI:
                       command=lambda v: setattr(self, "_auto_delay", float(v)))
         sp.pack(side="left", fill="x", expand=True, padx=(4, 8))
 
-        self._btn(row2, "📂 Abrir", TEXT_SEC, self._on_open_file).pack(
-            side="right", ipady=3, padx=2)
+        self._btn(row2, "📂 Abrir", TEXT_SEC, self._on_open_file).pack(side="right", ipady=3, padx=2)
+
+        # --- Panel de operaciones rápidas (generación dinámica de ensamblador)
+        op_frame = tk.Frame(frame, bg=BG_CARD)
+        op_frame.pack(fill="x", padx=6, pady=(6, 8))
+
+        tk.Label(op_frame, text="Operaciones Rápidas", font=("Consolas", 9, "bold"),
+                 fg=TEXT_SEC, bg=BG_CARD).pack(anchor="w")
+
+        inner = tk.Frame(op_frame, bg=BG_CARD)
+        inner.pack(fill="x", pady=(6, 2))
+
+        tk.Label(inner, text="Operación:", fg=TEXT_SEC, bg=BG_CARD).grid(row=0, column=0, sticky="w")
+        self._op_var = tk.StringVar(value="ADD")
+        ops = ("ADD", "SUB", "AND", "OR", "XOR", "SLT", "ADDI")
+        cmb = ttk.Combobox(inner, values=ops, textvariable=self._op_var, state="readonly", width=8)
+        cmb.grid(row=0, column=1, padx=(6, 12))
+
+        tk.Label(inner, text="A:", fg=TEXT_SEC, bg=BG_CARD).grid(row=0, column=2, sticky="e")
+        self._op_a = tk.Entry(inner, width=10, bg=BG_CARD, fg=TEXT_PRI, insertbackground=ACCENT)
+        self._op_a.grid(row=0, column=3, padx=(6, 12))
+
+        tk.Label(inner, text="B:", fg=TEXT_SEC, bg=BG_CARD).grid(row=0, column=4, sticky="e")
+        self._op_b = tk.Entry(inner, width=10, bg=BG_CARD, fg=TEXT_PRI, insertbackground=ACCENT)
+        self._op_b.grid(row=0, column=5, padx=(6, 4))
+
+        btn_gen = self._btn(inner, "Generar Programa", ACCENT2, self._on_generate_operation)
+        btn_gen.grid(row=1, column=1, columnspan=2, pady=(8, 0), sticky="we")
+        btn_exec = self._btn(inner, "Ejecutar", ACCENT, self._on_execute_operation)
+        btn_exec.grid(row=1, column=3, columnspan=2, pady=(8, 0), sticky="we", padx=(6, 0))
+
+        result_frame = tk.Frame(op_frame, bg=BG_PANEL)
+        result_frame.pack(fill="x", pady=(8, 0))
+        tk.Label(result_frame, text="Resultado:", fg=TEXT_SEC, bg=BG_PANEL).pack(side="left")
+        self._lbl_result = tk.Label(result_frame, text="—", fg=ACCENT2, bg=BG_PANEL, font=("Consolas", 9, "bold"))
+        self._lbl_result.pack(side="left", padx=(8, 12))
+        self._lbl_result_hex = tk.Label(result_frame, text="", fg=ACCENT4, bg=BG_PANEL, font=("Consolas", 9))
+        self._lbl_result_hex.pack(side="left")
 
     # ─── Datapath visual ──────────────────────────────────────────────────
 
@@ -616,7 +671,7 @@ class ProcessorGUI:
         self._log_text.pack(side="left", fill="both", expand=True, padx=4, pady=4)
 
         scrolly = ttk.Scrollbar(frame, orient="vertical",
-                                 command=self._log_text.yview)
+                     command=self._log_text.yview)
         scrolly.pack(side="right", fill="y")
         self._log_text.configure(yscrollcommand=scrolly.set)
 
@@ -656,7 +711,9 @@ class ProcessorGUI:
 
     def _build_right_panel(self, parent):
         nb = ttk.Notebook(parent)
-        nb.pack(fill="both", expand=True)
+        nb.grid(row=0, column=0, sticky="nsew")
+        parent.grid_rowconfigure(0, weight=1)
+        parent.grid_columnconfigure(0, weight=1)
 
         # Tab 1: Registros
         reg_tab = tk.Frame(nb, bg=BG_PANEL)
@@ -675,17 +732,21 @@ class ProcessorGUI:
 
     def _build_registers_tab(self, parent):
         hdr = tk.Frame(parent, bg=BG_PANEL)
-        hdr.pack(fill="x", padx=8, pady=(8, 4))
+        hdr.grid(row=0, column=0, sticky="we", padx=8, pady=(8, 4))
         tk.Label(hdr, text="Banco de Registros (32 × 32 bits)",
                  font=("Consolas", 9), fg=TEXT_SEC, bg=BG_PANEL).pack(side="left")
 
         container = tk.Frame(parent, bg=BG_PANEL)
-        container.pack(fill="both", expand=True, padx=4)
+        container.grid(row=1, column=0, sticky="nsew", padx=4)
+        parent.grid_rowconfigure(1, weight=1)
+        parent.grid_columnconfigure(0, weight=1)
 
         canvas = tk.Canvas(container, bg=BG_PANEL, bd=0, highlightthickness=0)
-        canvas.pack(side="left", fill="both", expand=True)
+        canvas.grid(row=0, column=0, sticky="nsew")
         scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
-        scrollbar.pack(side="right", fill="y")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(0, weight=1)
         canvas.configure(yscrollcommand=scrollbar.set)
 
         self._reg_frame = tk.Frame(canvas, bg=BG_PANEL)
@@ -738,21 +799,25 @@ class ProcessorGUI:
 
     def _build_memory_tab(self, parent):
         tk.Label(parent, text="Memoria de Datos (palabras no-cero)",
-                 font=("Consolas", 9), fg=TEXT_SEC, bg=BG_PANEL).pack(
-                     anchor="w", padx=8, pady=(8, 4))
+                 font=("Consolas", 9), fg=TEXT_SEC, bg=BG_PANEL).grid(
+                     row=0, column=0, sticky="w", padx=8, pady=(8,4))
 
         container = tk.Frame(parent, bg=BG_PANEL)
-        container.pack(fill="both", expand=True, padx=4, pady=4)
+        container.grid(row=1, column=0, sticky="nsew", padx=4, pady=4)
+        parent.grid_rowconfigure(1, weight=1)
+        parent.grid_columnconfigure(0, weight=1)
 
         self._mem_text = tk.Text(
             container, bg=BG_CARD, fg=TEXT_PRI,
             font=("Consolas", 9), state="disabled",
             bd=0, padx=8, pady=4, relief="flat",
         )
-        self._mem_text.pack(side="left", fill="both", expand=True)
+        self._mem_text.grid(row=0, column=0, sticky="nsew")
         scrollbar = ttk.Scrollbar(container, orient="vertical",
                                    command=self._mem_text.yview)
-        scrollbar.pack(side="right", fill="y")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(0, weight=1)
         self._mem_text.configure(yscrollcommand=scrollbar.set)
 
         self._mem_text.tag_configure("addr",  foreground=ACCENT4)
@@ -781,11 +846,13 @@ class ProcessorGUI:
 
     def _build_signals_tab(self, parent):
         tk.Label(parent, text="Señales de Control activas",
-                 font=("Consolas", 9), fg=TEXT_SEC, bg=BG_PANEL).pack(
-                     anchor="w", padx=8, pady=(8, 4))
+                 font=("Consolas", 9), fg=TEXT_SEC, bg=BG_PANEL).grid(row=0, column=0,
+                                                                      sticky="w", padx=8, pady=(8,4))
 
         self._sig_frame = tk.Frame(parent, bg=BG_PANEL)
-        self._sig_frame.pack(fill="both", expand=True, padx=8, pady=4)
+        self._sig_frame.grid(row=1, column=0, sticky="nsew", padx=8, pady=4)
+        parent.grid_rowconfigure(1, weight=1)
+        parent.grid_columnconfigure(0, weight=1)
 
         signal_defs = [
             ("RegDst",    "Registro destino: 1=rd, 0=rt"),
@@ -802,20 +869,21 @@ class ProcessorGUI:
 
         self._signal_indicators: dict[str, tk.Label] = {}
 
-        for sig, desc in signal_defs:
+        for i, (sig, desc) in enumerate(signal_defs):
             row = tk.Frame(self._sig_frame, bg=BG_PANEL)
-            row.pack(fill="x", pady=2)
+            row.grid(row=i, column=0, sticky="we", pady=2)
+            row.columnconfigure(2, weight=1)
 
             ind = tk.Label(row, text="●", font=("Consolas", 12),
                            fg=TEXT_MUT, bg=BG_PANEL, width=2)
-            ind.pack(side="left")
+            ind.grid(row=0, column=0)
 
             tk.Label(row, text=f"{sig:<12}", font=("Consolas", 9, "bold"),
                      fg=TEXT_PRI, bg=BG_PANEL, width=12,
-                     anchor="w").pack(side="left")
+                     anchor="w").grid(row=0, column=1)
 
             tk.Label(row, text=desc, font=("Consolas", 8),
-                     fg=TEXT_SEC, bg=BG_PANEL).pack(side="left", padx=4)
+                     fg=TEXT_SEC, bg=BG_PANEL).grid(row=0, column=2, sticky="w", padx=4)
 
             self._signal_indicators[sig] = ind
 
@@ -839,17 +907,21 @@ class ProcessorGUI:
 
     def _build_statusbar(self):
         bar = tk.Frame(self.root, bg=BG_PANEL, height=24)
-        bar.pack(fill="x", side="bottom")
-        tk.Frame(self.root, bg=BORDER, height=1).pack(fill="x", side="bottom")
+        bar.grid(row=2, column=0, sticky="ew")
+        tk.Frame(self.root, bg=BORDER, height=1).grid(row=3, column=0, sticky="ew")
+
+        self.root.rowconfigure(2, weight=0)
 
         self._lbl_statusbar = tk.Label(
             bar, text="Ingresa código ensamblador y presiona ▶ Ensamblar",
             font=("Consolas", 8), fg=TEXT_SEC, bg=BG_PANEL
         )
-        self._lbl_statusbar.pack(side="left", padx=8)
+        self._lbl_statusbar.grid(row=0, column=0, sticky="w", padx=8)
 
         tk.Label(bar, text="Andres Mogollon · Juan Bedoya · Michael Hurtado  |  Prof. David Romero",
-                 font=("Consolas", 8), fg=TEXT_MUT, bg=BG_PANEL).pack(side="right", padx=8)
+                 font=("Consolas", 8), fg=TEXT_MUT, bg=BG_PANEL).grid(row=0, column=1, sticky="e", padx=8)
+        bar.columnconfigure(0, weight=1)
+        bar.columnconfigure(1, weight=0)
 
     # ═══════════════════════════════════════════════════════
     #  Event Handlers
@@ -951,7 +1023,107 @@ class ProcessorGUI:
             self._editor.insert("1.0", content)
             self._on_editor_change()
             self._statusbar(f"Archivo cargado: {path}")
+        
+    def _parse_int_input(self, text: str) -> int:
+        """Parsea entrada de texto (decimal o hex) y valida rango 32-bit."""
+        s = (text or "").strip()
+        if s == "":
+            raise ValueError("Campo vacío")
+        try:
+            # int(..., 0) admite 0x y decimales; manejar -0x correctamente
+            if s.lower().startswith("-0x"):
+                return -int(s[3:], 16)
+            if s.lower().startswith("0x"):
+                val = int(s, 16)
+            else:
+                val = int(s, 0)
+        except Exception:
+            raise ValueError("Número inválido. Usa decimal o 0xHEX.")
+        # rango signed 32-bit
+        if not (-2**31 <= val <= 2**31 - 1):
+            raise ValueError("Valor fuera del rango de 32 bits")
+        return val
 
+    def _generate_assembly(self, op: str, a: int, b: int) -> str:
+        """Genera un snippet ensamblador que usa $t0,$t1,$s0 y termina en SW/NOP."""
+        op = op.upper()
+        lines = []
+        # cargar operandos en t0/t1 (si aplica)
+        lines.append(f"addi $t0, $zero, {a}")
+        if op == "ADDI":
+            # usar inmediato B
+            lines.append(f"addi $s0, $t0, {b}")
+        else:
+            lines.append(f"addi $t1, $zero, {b}")
+            mnemonic_map = {
+                "ADD": "add",
+                "SUB": "sub",
+                "AND": "and",
+                "OR":  "or",
+                "XOR": "xor",
+                "SLT": "slt",
+            }
+            instr = mnemonic_map.get(op, None)
+            if instr is None:
+                raise ValueError(f"Operación no soportada: {op}")
+            lines.append(f"{instr} $s0, $t0, $t1")
+
+        lines.append("sw   $s0, 0($zero)")
+        lines.append("nop")
+        return "\n".join(lines)
+
+    def _on_generate_operation(self):
+        try:
+            op = self._op_var.get()
+            a = self._parse_int_input(self._op_a.get())
+            b = self._parse_int_input(self._op_b.get())
+            asm = self._generate_assembly(op, a, b)
+            self._editor.delete("1.0", "end")
+            self._editor.insert("1.0", asm)
+            self._on_editor_change()
+            self._statusbar(f"Ensamblador generado para {op}: A={a} B={b}")
+        except Exception as e:
+            messagebox.showerror("Entrada inválida", str(e))
+
+    def _on_execute_operation(self):
+        """Genera, ensambla, carga y ejecuta el programa hasta HALT mostrando resultado."""
+        try:
+            # Generar y colocar en editor
+            self._on_generate_operation()
+            # Ensamblar y cargar
+            self._on_assemble()
+            # Ejecutar en background para mantener GUI responsiva
+            self._lbl_status.configure(text="● Ejecutando", fg=ACCENT)
+            threading.Thread(target=self._execute_run, daemon=True).start()
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def _execute_run(self):
+        """Ejecuta paso a paso hasta HALT usando la animación existente."""
+        # Deshabilitar botones principales mientras se ejecuta
+        self.root.after(0, lambda: self._btn_step.configure(state="disabled"))
+        try:
+            while not self.proc.is_halted:
+                # Ejecutar un paso (programa step / animación)
+                self.root.after(0, self._on_step)
+                # Esperar a que la animación termine (aprox. 5 etapas)
+                anim_ms = max(130, int(self._auto_delay * 280)) * 5
+                total_wait = self._auto_delay + anim_ms / 1000.0
+                time.sleep(total_wait)
+
+            # Al terminar, actualizar resultado mostrado
+            snap = self._current_snapshot
+            if snap and snap.write_reg:
+                from src.components.register_bank import REGISTER_NAMES
+                reg_name = REGISTER_NAMES.get(snap.write_reg, f"R{snap.write_reg}")
+                val = snap.write_back
+                hexv = f"{val:#010x}"
+                self.root.after(0, lambda: self._lbl_result.configure(text=f"{reg_name} = {val}"))
+                self.root.after(0, lambda: self._lbl_result_hex.configure(text=hexv))
+            else:
+                self.root.after(0, lambda: self._lbl_result.configure(text="(sin escritura)"))
+        finally:
+            self.root.after(0, lambda: self._btn_step.configure(state="normal"))
     # ═══════════════════════════════════════════════════════
     #  Actualización de UI
     # ═══════════════════════════════════════════════════════
@@ -1023,7 +1195,8 @@ class ProcessorGUI:
         self._lbl_statusbar.configure(text=text)
 
     def _set_example_code(self):
-        self._editor.insert("1.0", EXAMPLE_PROGRAM)
+        # No ejemplo fijo: dejar editor vacío para entrada interactiva
+        self._editor.delete("1.0", "end")
         self._on_editor_change()
 
     # ═══════════════════════════════════════════════════════
