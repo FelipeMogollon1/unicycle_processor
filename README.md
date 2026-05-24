@@ -17,7 +17,7 @@
 **Profesor:** David Andres Romero Arenas
 **Materia:** Arquitectura de Computadores
 **Unidad:** 4 — Procesador Monociclo
-**Semestre:** 2025-1
+**Semestre:** 2026-1
 
 ---
 
@@ -255,7 +255,7 @@ refactor(memory): extract base class for ROM and RAM
 
 ## 📜 Licencia
 
-Proyecto académico — Universidad, 2025.
+Proyecto académico — Universidad, 2026.
 Uso libre para fines educativos con atribución.
 
 ---
