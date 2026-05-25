@@ -106,6 +106,9 @@ class ProcessorGUI:
         self.root.configure(bg=BG_DARK)
         self.root.geometry("1400x900")
         self.root.minsize(1100, 700)
+        
+        # Manejador elegante para el evento de cierre de ventana
+        self.root.protocol("WM_DELETE_WINDOW", self._on_window_close)
 
         # Estilos ttk
         style = ttk.Style()
@@ -1204,7 +1207,16 @@ class ProcessorGUI:
     # ═══════════════════════════════════════════════════════
 
     def run(self):
-        self.root.mainloop()
+        try:
+            self.root.mainloop()
+        except KeyboardInterrupt:
+            pass
+
+    def _on_window_close(self):
+        """Manejador para cerrar la ventana elegantemente."""
+        self._auto_running = False
+        self.root.destroy()
+        sys.exit(0)
 
 
 def main():

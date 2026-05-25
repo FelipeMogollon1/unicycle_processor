@@ -24,7 +24,10 @@ sys.path.insert(0, BASE_DIR)
 def run_gui():
     """Lanza la interfaz gráfica."""
     from src.ui.app import main
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
 
 
 def run_demo():
